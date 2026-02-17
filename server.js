@@ -9,28 +9,21 @@ const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
-  res.send("WebSocket Server aktif 🚀");
+  res.send("HTTP Server çalışıyor 🚀");
 });
 
-wss.on("connection", function connection(ws) {
-  console.log("Yeni client bağlandı");
+wss.on("connection", (ws) => {
+  console.log("Yeni WebSocket bağlantısı!");
 
-  ws.on("message", function incoming(message) {
+  ws.send("Sunucuya bağlandın 🚀");
+
+  ws.on("message", (message) => {
     console.log("Gelen mesaj:", message.toString());
-
-    // Gelen mesajı herkese yayınla
-    wss.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message.toString());
-      }
-    });
-  });
-
-  ws.on("close", () => {
-    console.log("Client ayrıldı");
+    ws.send("Mesaj alındı: " + message);
   });
 });
 
 server.listen(PORT, () => {
   console.log(`Server ${PORT} portunda çalışıyor`);
+  console.log("WebSocket Server aktif 🚀");
 });
