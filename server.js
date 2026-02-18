@@ -9,7 +9,7 @@ const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 3000;
 
 app.get("/", (req, res) => {
-  res.send("HTTP Server çalışıyor 🚀");
+  res.send("HTTP + WebSocket Server çalışıyor 🚀");
 });
 
 wss.on("connection", (ws) => {
@@ -19,7 +19,17 @@ wss.on("connection", (ws) => {
 
   ws.on("message", (message) => {
     console.log("Gelen mesaj:", message.toString());
-    ws.send("Mesaj alındı: " + message);
+
+    // Broadcast sistemi
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send("Broadcast: " + message.toString());
+      }
+    });
+  });
+
+  ws.on("close", () => {
+    console.log("Bağlantı kapandı");
   });
 });
 
