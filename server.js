@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
+const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 const server = http.createServer(app);
@@ -8,28 +9,53 @@ const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 3000;
 
+const clients = {};
+
 app.get("/", (req, res) => {
-  res.send("HTTP + WebSocket Server çalışıyor 🚀");
+  res.send("Smart WebSocket Server aktif 🚀");
 });
 
 wss.on("connection", (ws) => {
-  console.log("Yeni WebSocket bağlantısı!");
+  const clientId = uuidv4();
+  clients[clientId] = ws;
 
-  ws.send("Sunucuya bağlandın 🚀");
+  console.log("Yeni bağlantı:", clientId);
+
+  ws.send(JSON.stringify({
+    type: "welcome",
+    clientId: clientId
+  }));
 
   ws.on("message", (message) => {
-    console.log("Gelen mesaj:", message.toString());
+    const data = JSON.parse(message.toString());
 
-    // Broadcast sistemi
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send("Broadcast: " + message.toString());
+    if (data.type === "broadcast") {
+      Object.keys(clients).forEach(id => {
+        if (clients[id].readyState === WebSocket.OPEN) {
+          clients[id].send(JSON.stringify({
+            type: "broadcast",
+            from: clientId,
+            message: data.message
+          }));
+        }
+      });
+    }
+
+    if (data.type === "private") {
+      const target = data.targetId;
+      if (clients[target] && clients[target].readyState === WebSocket.OPEN) {
+        clients[target].send(JSON.stringify({
+          type: "private",
+          from: clientId,
+          message: data.message
+        }));
       }
-    });
+    }
   });
 
   ws.on("close", () => {
-    console.log("Bağlantı kapandı");
+    delete clients[clientId];
+    console.log("Bağlantı kapandı:", clientId);
   });
 });
 
